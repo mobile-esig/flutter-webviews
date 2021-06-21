@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:webviews_test/constants.dart';
 import 'package:webviews_test/webview_pages/flutter_inappwebview_page.dart';
@@ -43,7 +44,7 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text('Webviews'),
       ),
       body: FutureBuilder(
-        future: requestStoragePermission(),
+        future: initApp(),
         builder: (context, snapshot) {
           return Center(
             child: Column(
@@ -103,7 +104,18 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Future initApp() async {
+    await requestStoragePermission();
+    await initFlutterDownloader();
+  }
+
   Future requestStoragePermission() async {
-    Permission.storage.request();
+    await Permission.storage.request();
+  }
+
+  Future initFlutterDownloader() async {
+    await FlutterDownloader.initialize(
+        debug: true // optional: set false to disable printing logs to console
+        );
   }
 }

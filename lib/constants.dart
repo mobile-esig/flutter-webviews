@@ -12,4 +12,5 @@ const String DOWNLOAD_IMG =
     'https://carbon.now.sh/?bg=rgba(74%2C144%2C226%2C1)&t=material&wt=none&l=auto&ds=false&dsyoff=20px&dsblur=68px&wc=true&wa=true&pv=56px&ph=56px&ln=false&fl=1&fm=Fira%20Code&fs=14px&lh=152%25&si=false&es=2x&wm=false';
 
 /// Testar se baixa um PDF
-const String DOWNLOAD_PDF = 'http://www.jucerr.rr.gov.br/manuais/pdf-a.pdf';
+const String DOWNLOAD_PDF =
+    'https://download.inep.gov.br/educacao_basica/portal_ideb/planilhas_para_download/2019/resumo_tecnico_ideb_2019_versao_preliminar.pdf';

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// Exemplo retirado da documentação oficial do plugin.
 /// https://pub.dev/packages/flutter_inappwebview/versions/4.0.0+4#inappwebview-class
@@ -60,10 +62,22 @@ class _InAppWebviewPageState extends State<InAppWebviewPage> {
                     initialOptions: InAppWebViewGroupOptions(
                       crossPlatform: InAppWebViewOptions(
                         debuggingEnabled: true,
+                        useOnDownloadStart: true,
                       ),
                     ),
                     onWebViewCreated: (InAppWebViewController controller) {
                       webView = controller;
+                    },
+                    onDownloadStart: (controller, url) async {
+                      print('onDownloadStart $url');
+                      final taskId = await FlutterDownloader.enqueue(
+                        url: url,
+                        savedDir: (await getExternalStorageDirectory()).path,
+                        showNotification:
+                            true, // show download progress in status bar (for Android)
+                        openFileFromNotification:
+                            true, // click on notification to open downloaded file (for Android)
+                      );
                     },
                     onLoadStart:
                         (InAppWebViewController controller, String url) {
@@ -82,10 +96,6 @@ class _InAppWebviewPageState extends State<InAppWebviewPage> {
                       setState(() {
                         this.progress = progress / 100;
                       });
-                    },
-                    onDownloadStart:
-                        (InAppWebViewController controller, String url) {
-                      print('download: $url');
                     },
                   ),
                 ),
