@@ -1,15 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Exemplo retirado da documentação oficial do plugin.
 /// https://pub.dev/packages/flutter_inappwebview/versions/4.0.0+4#inappwebview-class
 class InAppWebviewPage extends StatefulWidget {
   final String url;
   const InAppWebviewPage({
-    Key key,
-    @required this.url,
+    Key? key,
+    required this.url,
   }) : super(key: key);
 
   @override
@@ -17,122 +18,195 @@ class InAppWebviewPage extends StatefulWidget {
 }
 
 class _InAppWebviewPageState extends State<InAppWebviewPage> {
-  InAppWebViewController webView;
+  final GlobalKey webViewKey = GlobalKey();
+
+  InAppWebViewController? webViewController;
+  final options = InAppWebViewGroupOptions(
+    crossPlatform: InAppWebViewOptions(
+      useShouldOverrideUrlLoading: true,
+      mediaPlaybackRequiresUserGesture: false,
+    ),
+    android: AndroidInAppWebViewOptions(
+      useHybridComposition: true,
+    ),
+    ios: IOSInAppWebViewOptions(
+      allowsInlineMediaPlayback: true,
+    ),
+  );
+
+  late PullToRefreshController pullToRefreshController;
   String url = '';
   double progress = 0;
+  final urlController = TextEditingController();
 
   @override
   void initState() {
-    super.initState();
-  }
+    pullToRefreshController = PullToRefreshController(
+      options: PullToRefreshOptions(
+        color: Colors.blue,
+      ),
+      onRefresh: () async {
+        if (Platform.isAndroid) {
+          webViewController?.reload();
+        } else if (Platform.isIOS) {
+          webViewController?.loadUrl(
+              urlRequest: URLRequest(url: await webViewController?.getUrl()));
+        }
+      },
+    );
 
-  @override
-  void dispose() {
-    super.dispose();
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(title: Text('InAppWebView')),
-        body: Container(
+        appBar: AppBar(
+          title: Text('InAppWebView'),
+          automaticallyImplyLeading: true,
+        ),
+        body: SafeArea(
           child: Column(
-            children: <Widget>[
-              Container(
-                padding: EdgeInsets.all(20.0),
-                child: Text(
-                  'CURRENT URL\n${(url.length > 50) ? url.substring(0, 50) + '...' : url}',
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.all(10.0),
-                child: progress < 1.0
-                    ? LinearProgressIndicator(value: progress)
-                    : Container(),
-              ),
+            children: [
+              _buildURLBar(),
               Expanded(
-                child: Container(
-                  margin: const EdgeInsets.all(10.0),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.blueAccent),
-                  ),
-                  child: InAppWebView(
-                    initialUrl: widget.url,
-                    initialOptions: InAppWebViewGroupOptions(
-                      crossPlatform: InAppWebViewOptions(
-                        debuggingEnabled: true,
-                        useOnDownloadStart: true,
+                child: Stack(
+                  children: [
+                    InAppWebView(
+                      key: webViewKey,
+                      initialUrlRequest: URLRequest(
+                        url: Uri.parse(widget.url),
                       ),
+                      initialOptions: options,
+                      pullToRefreshController: pullToRefreshController,
+                      onWebViewCreated: (controller) {
+                        webViewController = controller;
+                      },
+                      onLoadStart: onLoadStart,
+                      androidOnPermissionRequest: androidOnPermissionRequest,
+                      shouldOverrideUrlLoading: showOverrideUrlLoading,
+                      onLoadStop: onLoadStop,
+                      onLoadError: onLoadError,
+                      onProgressChanged: onProgressChanged,
+                      onUpdateVisitedHistory: onUpdateVisitedHistory,
+                      onConsoleMessage: onConsoleMessage,
                     ),
-                    onWebViewCreated: (InAppWebViewController controller) {
-                      webView = controller;
-                    },
-                    onDownloadStart: (controller, url) async {
-                      print('onDownloadStart $url');
-                      final taskId = await FlutterDownloader.enqueue(
-                        url: url,
-                        savedDir: (await getExternalStorageDirectory()).path,
-                        showNotification:
-                            true, // show download progress in status bar (for Android)
-                        openFileFromNotification:
-                            true, // click on notification to open downloaded file (for Android)
-                      );
-                    },
-                    onLoadStart:
-                        (InAppWebViewController controller, String url) {
-                      setState(() {
-                        this.url = url;
-                      });
-                    },
-                    onLoadStop:
-                        (InAppWebViewController controller, String url) async {
-                      setState(() {
-                        this.url = url;
-                      });
-                    },
-                    onProgressChanged:
-                        (InAppWebViewController controller, int progress) {
-                      setState(() {
-                        this.progress = progress / 100;
-                      });
-                    },
-                  ),
+                    progress < 1.0
+                        ? LinearProgressIndicator(value: progress)
+                        : Container(),
+                  ],
                 ),
               ),
-              ButtonBar(
-                alignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  ElevatedButton(
-                    child: Icon(Icons.arrow_back),
-                    onPressed: () {
-                      if (webView != null) {
-                        webView.goBack();
-                      }
-                    },
-                  ),
-                  ElevatedButton(
-                    child: Icon(Icons.arrow_forward),
-                    onPressed: () {
-                      if (webView != null) {
-                        webView.goForward();
-                      }
-                    },
-                  ),
-                  ElevatedButton(
-                    child: Icon(Icons.refresh),
-                    onPressed: () {
-                      if (webView != null) {
-                        webView.reload();
-                      }
-                    },
-                  ),
-                ],
-              ),
+              _buildButtonBar(),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  void onConsoleMessage(controller, consoleMessage) {
+    print('consoleMessage: $consoleMessage');
+  }
+
+  void onLoadError(controller, url, code, message) {
+    pullToRefreshController.endRefreshing();
+  }
+
+  void onLoadStart(controller, url) {
+    setState(() {
+      this.url = url.toString();
+      urlController.text = this.url;
+    });
+  }
+
+  Widget _buildButtonBar() {
+    return ButtonBar(
+      alignment: MainAxisAlignment.center,
+      children: <Widget>[
+        ElevatedButton(
+          child: Icon(Icons.arrow_back),
+          onPressed: () {
+            webViewController?.goBack();
+          },
+        ),
+        ElevatedButton(
+          child: Icon(Icons.arrow_forward),
+          onPressed: () {
+            webViewController?.goForward();
+          },
+        ),
+        ElevatedButton(
+          child: Icon(Icons.refresh),
+          onPressed: () {
+            webViewController?.reload();
+          },
+        ),
+      ],
+    );
+  }
+
+  void onUpdateVisitedHistory(controller, url, androidIsReload) {
+    setState(() {
+      this.url = url.toString();
+      urlController.text = this.url;
+    });
+  }
+
+  void onProgressChanged(controller, progress) {
+    if (progress == 100) {
+      pullToRefreshController.endRefreshing();
+    }
+    setState(() {
+      this.progress = progress / 100;
+      urlController.text = url;
+    });
+  }
+
+  void onLoadStop(controller, url) async {
+    pullToRefreshController.endRefreshing();
+    setState(() {
+      this.url = url.toString();
+      urlController.text = this.url;
+    });
+  }
+
+  Future<NavigationActionPolicy?> showOverrideUrlLoading(
+      controller, navigationAction) async {
+    var uri = navigationAction.request.url!;
+
+    if (!['http', 'https', 'file', 'chrome', 'data', 'javascript', 'about']
+        .contains(uri.scheme)) {
+      if (await canLaunch(url)) {
+        // Launch the App
+        await launch(url);
+        // and cancel the request
+        return NavigationActionPolicy.CANCEL;
+      }
+    }
+
+    return NavigationActionPolicy.ALLOW;
+  }
+
+  Future<PermissionRequestResponse?> androidOnPermissionRequest(
+      controller, origin, resources) async {
+    return PermissionRequestResponse(
+        resources: resources, action: PermissionRequestResponseAction.GRANT);
+  }
+
+  Widget _buildURLBar() {
+    return TextField(
+      decoration: InputDecoration(prefixIcon: Icon(Icons.search)),
+      controller: urlController,
+      keyboardType: TextInputType.url,
+      onSubmitted: (value) {
+        var url = Uri.parse(value);
+        if (url.scheme.isEmpty) {
+          url = Uri.parse('https://www.google.com/search?q=' + value);
+        }
+        webViewController?.loadUrl(urlRequest: URLRequest(url: url));
+      },
     );
   }
 }

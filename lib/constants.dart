@@ -13,4 +13,4 @@ const String DOWNLOAD_IMG =
 
 /// Testar se baixa um PDF
 const String DOWNLOAD_PDF =
-    'https://download.inep.gov.br/educacao_basica/portal_ideb/planilhas_para_download/2019/resumo_tecnico_ideb_2019_versao_preliminar.pdf';
+    'http://200.17.137.109:8081/novobsi/Members/josino/fundamentos-de-engenharia-de-software/2011.2/slides/Slide8.pdf';

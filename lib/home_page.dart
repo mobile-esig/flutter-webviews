@@ -3,24 +3,27 @@ import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:webviews_test/constants.dart';
 import 'package:webviews_test/webview_pages/flutter_inappwebview_page.dart';
-import 'package:webviews_test/webview_pages/flutter_webview_plugin_page.dart';
 import 'package:webviews_test/webview_pages/webview_flutter_page.dart';
 
 class MyHomePage extends StatefulWidget {
+  const MyHomePage({Key? key}) : super(key: key);
+
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
   final double padding = 50;
-  String dropdownCurrentValue;
-  List<DropdownMenuItem<String>> dropdownMenuItens;
+  late String dropdownCurrentValue;
+  late List<DropdownMenuItem<String>> dropdownMenuItens;
   final Map<String, String> urls = {
     'DOWNLOAD_IMG': DOWNLOAD_IMG,
     'DOWNLOAD_PDF': DOWNLOAD_PDF,
     'UPLOAD_IMG': UPLOAD_IMG,
     'COMPLEX_PAGE': COMPLEX_PAGE
   };
+
+  bool downloaderInitialized = false;
 
   @override
   void initState() {
@@ -54,9 +57,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 DropdownButton<String>(
                   value: dropdownCurrentValue,
                   items: dropdownMenuItens,
-                  onChanged: (newValue) {
+                  onChanged: (String? newValue) {
                     setState(() {
-                      dropdownCurrentValue = newValue;
+                      dropdownCurrentValue = newValue ?? '';
                     });
                   },
                 ),
@@ -73,17 +76,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   },
                 ),
                 SizedBox(height: padding),
-                ElevatedButton(
-                  child: Text('flutter_webview_plugin'),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            FlutterWebviewPluginPage(url: dropdownCurrentValue),
-                      ),
-                    );
-                  },
-                ),
                 SizedBox(height: padding),
                 ElevatedButton(
                   child: Text('flutter_inappwebview'),
@@ -114,8 +106,11 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future initFlutterDownloader() async {
-    await FlutterDownloader.initialize(
-        debug: true // optional: set false to disable printing logs to console
-        );
+    if (!downloaderInitialized) {
+      await FlutterDownloader.initialize(
+          debug: true // optional: set false to disable printing logs to console
+          );
+      downloaderInitialized = true;
+    }
   }
 }

@@ -6,8 +6,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 class WebviewFlutterPage extends StatefulWidget {
   final String url;
   const WebviewFlutterPage({
-    Key key,
-    @required this.url,
+    Key? key,
+    required this.url,
   }) : super(key: key);
 
   @override
@@ -25,7 +25,10 @@ class _WebviewFlutterPageState extends State<WebviewFlutterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('WebviewFlutter')),
+      appBar: AppBar(
+        title: Text('WebviewFlutter'),
+        automaticallyImplyLeading: true,
+      ),
       body: WebView(
         initialUrl: widget.url,
         javascriptMode: JavascriptMode.unrestricted,
