@@ -18,9 +18,9 @@ class InAppWebviewPage extends StatefulWidget {
 }
 
 class _InAppWebviewPageState extends State<InAppWebviewPage> {
-  final GlobalKey webViewKey = GlobalKey();
+  final _webViewKey = GlobalKey();
 
-  InAppWebViewController? webViewController;
+  late InAppWebViewController _webViewController;
   final options = InAppWebViewGroupOptions(
     crossPlatform: InAppWebViewOptions(
       useShouldOverrideUrlLoading: true,
@@ -34,23 +34,26 @@ class _InAppWebviewPageState extends State<InAppWebviewPage> {
     ),
   );
 
-  late PullToRefreshController pullToRefreshController;
+  late PullToRefreshController _pullToRefreshController;
   String url = '';
   double progress = 0;
   final urlController = TextEditingController();
 
   @override
   void initState() {
-    pullToRefreshController = PullToRefreshController(
+    _pullToRefreshController = PullToRefreshController(
       options: PullToRefreshOptions(
         color: Colors.blue,
       ),
       onRefresh: () async {
         if (Platform.isAndroid) {
-          webViewController?.reload();
+          _webViewController.reload();
         } else if (Platform.isIOS) {
-          webViewController?.loadUrl(
-              urlRequest: URLRequest(url: await webViewController?.getUrl()));
+          _webViewController.loadUrl(
+            urlRequest: URLRequest(
+              url: await _webViewController.getUrl(),
+            ),
+          );
         }
       },
     );
@@ -74,23 +77,24 @@ class _InAppWebviewPageState extends State<InAppWebviewPage> {
                 child: Stack(
                   children: [
                     InAppWebView(
-                      key: webViewKey,
+                      key: _webViewKey,
                       initialUrlRequest: URLRequest(
-                        url: Uri.parse(widget.url),
+                        url: Uri.parse(
+                            'https://testes-quarkclinic-ng.esig.com.br/'),
                       ),
                       initialOptions: options,
-                      pullToRefreshController: pullToRefreshController,
+                      pullToRefreshController: _pullToRefreshController,
                       onWebViewCreated: (controller) {
-                        webViewController = controller;
+                        _webViewController = controller;
                       },
-                      onLoadStart: onLoadStart,
-                      androidOnPermissionRequest: androidOnPermissionRequest,
-                      shouldOverrideUrlLoading: showOverrideUrlLoading,
-                      onLoadStop: onLoadStop,
-                      onLoadError: onLoadError,
-                      onProgressChanged: onProgressChanged,
-                      onUpdateVisitedHistory: onUpdateVisitedHistory,
-                      onConsoleMessage: onConsoleMessage,
+                      onLoadStart: _onLoadStart,
+                      androidOnPermissionRequest: _androidOnPermissionRequest,
+                      shouldOverrideUrlLoading: _showOverrideUrlLoading,
+                      onLoadStop: _onLoadStop,
+                      onLoadError: _onLoadError,
+                      onProgressChanged: _onProgressChanged,
+                      onUpdateVisitedHistory: _onUpdateVisitedHistory,
+                      onConsoleMessage: _onConsoleMessage,
                     ),
                     progress < 1.0
                         ? LinearProgressIndicator(value: progress)
@@ -106,15 +110,15 @@ class _InAppWebviewPageState extends State<InAppWebviewPage> {
     );
   }
 
-  void onConsoleMessage(controller, consoleMessage) {
+  void _onConsoleMessage(controller, consoleMessage) {
     print('consoleMessage: $consoleMessage');
   }
 
-  void onLoadError(controller, url, code, message) {
-    pullToRefreshController.endRefreshing();
+  void _onLoadError(controller, url, code, message) {
+    _pullToRefreshController.endRefreshing();
   }
 
-  void onLoadStart(controller, url) {
+  void _onLoadStart(controller, url) {
     setState(() {
       this.url = url.toString();
       urlController.text = this.url;
@@ -128,35 +132,35 @@ class _InAppWebviewPageState extends State<InAppWebviewPage> {
         ElevatedButton(
           child: Icon(Icons.arrow_back),
           onPressed: () {
-            webViewController?.goBack();
+            _webViewController.goBack();
           },
         ),
         ElevatedButton(
           child: Icon(Icons.arrow_forward),
           onPressed: () {
-            webViewController?.goForward();
+            _webViewController.goForward();
           },
         ),
         ElevatedButton(
           child: Icon(Icons.refresh),
           onPressed: () {
-            webViewController?.reload();
+            _webViewController.reload();
           },
         ),
       ],
     );
   }
 
-  void onUpdateVisitedHistory(controller, url, androidIsReload) {
+  void _onUpdateVisitedHistory(controller, url, androidIsReload) {
     setState(() {
       this.url = url.toString();
       urlController.text = this.url;
     });
   }
 
-  void onProgressChanged(controller, progress) {
+  void _onProgressChanged(controller, progress) {
     if (progress == 100) {
-      pullToRefreshController.endRefreshing();
+      _pullToRefreshController.endRefreshing();
     }
     setState(() {
       this.progress = progress / 100;
@@ -164,15 +168,20 @@ class _InAppWebviewPageState extends State<InAppWebviewPage> {
     });
   }
 
-  void onLoadStop(controller, url) async {
-    pullToRefreshController.endRefreshing();
+  void _onLoadStop(controller, url) async {
+    _pullToRefreshController.endRefreshing();
     setState(() {
       this.url = url.toString();
       urlController.text = this.url;
     });
+
+    await _webViewController.evaluateJavascript(
+      source:
+          "alert(`localstorage: \${window.localStorage.getItem('quarkclinic.token.v2')}`)",
+    );
   }
 
-  Future<NavigationActionPolicy?> showOverrideUrlLoading(
+  Future<NavigationActionPolicy?> _showOverrideUrlLoading(
       controller, navigationAction) async {
     var uri = navigationAction.request.url!;
 
@@ -189,7 +198,7 @@ class _InAppWebviewPageState extends State<InAppWebviewPage> {
     return NavigationActionPolicy.ALLOW;
   }
 
-  Future<PermissionRequestResponse?> androidOnPermissionRequest(
+  Future<PermissionRequestResponse?> _androidOnPermissionRequest(
       controller, origin, resources) async {
     return PermissionRequestResponse(
         resources: resources, action: PermissionRequestResponseAction.GRANT);
@@ -205,7 +214,7 @@ class _InAppWebviewPageState extends State<InAppWebviewPage> {
         if (url.scheme.isEmpty) {
           url = Uri.parse('https://www.google.com/search?q=' + value);
         }
-        webViewController?.loadUrl(urlRequest: URLRequest(url: url));
+        _webViewController.loadUrl(urlRequest: URLRequest(url: url));
       },
     );
   }
